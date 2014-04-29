@@ -1,0 +1,7 @@
+<!doctype html>
+<title>Hello from Phlask</title>
+{% if current_user.is_authenticated() %}
+authenticated as {{ current_user.email }}
+{% else %}
+not authenticated
+{% endif %}
