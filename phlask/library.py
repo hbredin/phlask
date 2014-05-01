@@ -25,15 +25,24 @@
 # SOFTWARE.
 #
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
 import networkx as nx
 import yaml
 from path import path
 
+from flask.ext.security import current_user
+
 ALBUM_YML = 'album.yml'
-SUPPORTED = {
-	'JPEG': ['jpg', 'jpeg', 'JPG', 'JPEG'], 
+
+PHOTO_SUPPORTED = {
+	'.jpg': 'image/jpeg',
+	'.jpeg': 'image/jpeg',
+	'.png': 'image/png',
+}
+
+VIDEO_SUPPORTED = {
+	'.mp4': 'video/mp4',
+	'.webm': 'video/webm',
+	'.ogv': 'video/ogg',
 }
 
 class Library(nx.DiGraph):
@@ -135,7 +144,8 @@ class Library(nx.DiGraph):
 		supported : boolean
 			True if medium is supported, False otherwise.
 		"""
-		return True
+		ext = medium.ext.lower()
+		return ext in PHOTO_SUPPORTED or ext in VIDEO_SUPPORTED
 
 	def _media(self, album):
 		"""Get list of supported media in `album` 
@@ -270,7 +280,7 @@ class Library(nx.DiGraph):
 				self._back_propagate(supalbum, new_users, new_groups)
 
 
-	def is_allowed(self, config, user, groups=None):
+	def is_allowed(self, config):
 		"""Check whether `user` is allowed according to `config`
 
 		Parameters
@@ -286,15 +296,15 @@ class Library(nx.DiGraph):
 			True if `user` is allowed according to `config`, False otherwise
 		"""
 		
-		if user in config['users']:
+		if current_user.email in config['users']:
 			return True
 
-		if groups and (set(groups) & config['groups']):
-			return True 
+		# if groups and (set(groups) & config['groups']):
+		# 	return True 
 		
 		return False
 
-	def is_traversable(self, album, user, groups=None):
+	def is_traversable(self, album):
 		"""Check whether `user` can traverse `album`
 
 		Parameters
@@ -315,9 +325,9 @@ class Library(nx.DiGraph):
 			return True
 
 		supalbum = self.predecessors(album)[0]
-		return self.is_allowed(self[supalbum][album], user, groups=groups)
+		return self.is_allowed(self[supalbum][album])
 
-	def sub_albums(self, album, user, groups=None):
+	def sub_albums(self, album):
 		"""Get list of traversable sub-albums
 
 		Parameters
@@ -335,15 +345,15 @@ class Library(nx.DiGraph):
 			list of traversable sub-albums if they can.
 		"""
 
-		if not self.is_traversable(album, user, groups=groups):
+		if not self.is_traversable(album):
 			return None
 
 		return [
 			subalbum for subalbum in self.successors(album)
-			if self.is_allowed(self[album][subalbum], user, groups=groups)
+			if self.is_allowed(self[album][subalbum])
 		]
 
-	def is_browsable(self, album, user, groups=None):
+	def is_browsable(self, album):
 		"""Check whether `user` can browse `album`
 
 		Parameters
@@ -362,9 +372,9 @@ class Library(nx.DiGraph):
 		if album == '':
 			return True
 
-		return self.is_allowed(self.node[album], user, groups=groups)
+		return self.is_allowed(self.node[album])
 
-	def media(self, album, user, groups=None):
+	def media(self, album):
 		"""Get list of media in `album` 
 
 		Parameters
@@ -382,7 +392,12 @@ class Library(nx.DiGraph):
 			list of supported media if they can.
 		"""
 
-		if not self.is_browsable(album, user, groups=groups):
+		if not self.is_browsable(album):
 			return None
 
 		return self.node[album]['media']
+
+	def absolute_path(self, relative_path):
+		root = self.graph['root']
+		return path.joinpath(root, relative_path)
+

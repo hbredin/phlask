@@ -38,13 +38,16 @@ Options:
 
 """
 
+# phlask app
 from phlask import app
+
+
 from docopt import docopt
-from phlask.tree import Tree
+from phlask.library import Library
 from path import path
 import yaml
 
-from flask import render_template
+from flask import render_template, redirect, url_for, send_file
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
@@ -55,13 +58,18 @@ if __name__ == '__main__':
     ARGUMENTS = docopt(__doc__)
 
     with open(ARGUMENTS['<config>'], mode='r') as _:
-        config = yaml.load(_)
+        CONFIG = yaml.load(_)
 
-    app.secret_key = config['secret_key']
-    app.debug = config['debug']
+    app.secret_key = CONFIG['secret_key']
+    app.debug = CONFIG['debug']
+
+    # Flask-Security configuration
+    app.config['SECURITY_BLUEPRINT_NAME'] = 'security'
+    app.config['SECURITY_URL_PREFIX'] = '/api'
 
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + CONFIG['database']
+    print app.config['SQLALCHEMY_DATABASE_URI']
 
     # Create database connection object
     db = SQLAlchemy(app)
@@ -77,15 +85,19 @@ if __name__ == '__main__':
         description = db.Column(db.String(255))
 
     class User(db.Model, UserMixin):
+
         id = db.Column(db.Integer, primary_key=True)
-        email = db.Column(db.String(255), unique=True)
+        email = db.Column(db.String(255), unique=True)        
         password = db.Column(db.String(255))
+
         active = db.Column(db.Boolean())
         confirmed_at = db.Column(db.DateTime())
+        
         roles = db.relationship(
             'Role', 
             secondary=roles_users,
-            backref=db.backref('users', lazy='dynamic'))
+            backref=db.backref('users', lazy='dynamic')
+        )
 
     # Setup Flask-Security
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -95,20 +107,45 @@ if __name__ == '__main__':
     @app.before_first_request
     def create_user():
         db.create_all()
-        user_datastore.create_user(email='herve.bredin@gmail.com', password='password')
+        user_datastore.create_user(
+            email='herve.bredin@gmail.com', 
+            password='password'
+        )
         db.session.commit()
 
-    app.config['photo_dir'] = path(config['photo_dir'])
-    app.config['thumb_dir'] = path(config['thumb_dir'])
+    app.config['photo_dir'] = path(CONFIG['photo_dir'])
+    app.config['thumb_dir'] = path(CONFIG['thumb_dir'])
 
-    app.tree = Tree(app.config['photo_dir'])
+    app.config['library'] = Library(app.config['photo_dir'])
 
-    # Views
+    # inject `library` into the context of templates
+    # http://flask.pocoo.org/docs/templating/#context-processors
+    @app.context_processor
+    def inject_library():
+        return dict(library=app.config['library'])
+
     @app.route('/')
     @login_required
-    def home():
-        return render_template('index.html')
+    def root():
+        return redirect(url_for('get_album', album=''))
 
-    
+    @app.route('/album/')
+    @app.route('/album/<path:album>')
+    @login_required
+    def get_album(album=''):
+        return render_template('album.html', album=path(album))
+
+    @app.route('/thumbnail/<dimension>/<path:medium>')
+    @login_required
+    def get_thumbnail(dimension=None, medium=None):
+        return send_file(filename, mimetype='image/jpeg')
+
+    @app.route('/medium/<path:medium>')
+    @login_required
+    def get_medium(medium=None):
+        return send_file(
+            app.config['library'].absolute_path(medium)
+        )
 
     app.run()
+

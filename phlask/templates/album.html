@@ -1,0 +1,10 @@
+<!doctype html>
+<title>Phlask | {{ album }}</title>
+authenticated as {{ current_user.email }}<br/>
+{% for subalbum in library.sub_albums(album) %}
+	<a href={{ url_for('get_album', album=subalbum) }}>{{ subalbum }}</a>
+{% endfor %}
+{% for medium in library.media(album) %}
+	<a href={{ url_for('get_medium', medium=medium) }}>{{ medium }}</a>
+{% endfor %}
+
