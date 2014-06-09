@@ -65,7 +65,8 @@ if __name__ == '__main__':
     # Flask-Security configuration
     # app.config['SECURITY_BLUEPRINT_NAME'] = 'security'
     # app.config['SECURITY_URL_PREFIX'] = '/api'
-
+    app.config['SECURITY_REGISTERABLE'] = True
+    app.config['SECURITY_SEND_REGISTER_EMAIL'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + CONFIG['database']
 
     # Create database connection object
