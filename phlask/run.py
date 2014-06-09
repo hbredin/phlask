@@ -38,20 +38,19 @@ Options:
 
 """
 
-# phlask app
-from phlask import app
-
-
-from docopt import docopt
-from phlask.library import Library
-from path import path
 import yaml
+from path import path
+from docopt import docopt
 
 from flask import render_template, redirect, url_for, send_file
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
 
+from phlask import app
+from phlask.library import Library
+from phlask.library import USER_ROLE_NAME, USER_ROLE_DESCRIPTION, \
+    ADMIN_ROLE_NAME, ADMIN_ROLE_DESCRIPTION, ADMIN_USER
 
 if __name__ == '__main__':
 
@@ -64,20 +63,19 @@ if __name__ == '__main__':
     app.debug = CONFIG['debug']
 
     # Flask-Security configuration
-    app.config['SECURITY_BLUEPRINT_NAME'] = 'security'
-    app.config['SECURITY_URL_PREFIX'] = '/api'
-
+    # app.config['SECURITY_BLUEPRINT_NAME'] = 'security'
+    # app.config['SECURITY_URL_PREFIX'] = '/api'
 
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + CONFIG['database']
-    print app.config['SQLALCHEMY_DATABASE_URI']
 
     # Create database connection object
     db = SQLAlchemy(app)
 
     # Define models
-    roles_users = db.Table('roles_users',
-            db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
-            db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
+    roles_users = db.Table(
+        'roles_users',
+        db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
+        db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
 
     class Role(db.Model, RoleMixin):
         id = db.Column(db.Integer(), primary_key=True)
@@ -87,14 +85,13 @@ if __name__ == '__main__':
     class User(db.Model, UserMixin):
 
         id = db.Column(db.Integer, primary_key=True)
-        email = db.Column(db.String(255), unique=True)        
+        email = db.Column(db.String(255), unique=True)
         password = db.Column(db.String(255))
-
         active = db.Column(db.Boolean())
         confirmed_at = db.Column(db.DateTime())
-        
+
         roles = db.relationship(
-            'Role', 
+            'Role',
             secondary=roles_users,
             backref=db.backref('users', lazy='dynamic')
         )
@@ -103,20 +100,39 @@ if __name__ == '__main__':
     user_datastore = SQLAlchemyUserDatastore(db, User, Role)
     security = Security(app, user_datastore)
 
-    # Create a user to test with
     @app.before_first_request
-    def create_user():
+    def create_root_user():
+
         db.create_all()
-        user_datastore.create_user(
-            email='herve.bredin@gmail.com', 
-            password='password'
-        )
+
+        # create 'admin' role if it does not exist
+        admin_role = user_datastore.find_or_create_role(
+            name=ADMIN_ROLE_NAME, description=ADMIN_ROLE_DESCRIPTION)
+
+        # create 'user' role if it does not exist
+        user_datastore.find_or_create_role(
+            name=USER_ROLE_NAME, description=USER_ROLE_DESCRIPTION)
+
+        # create 'admin' user (with 'admin' role) if it does not exist
+        admin = user_datastore.get_user(ADMIN_USER)
+        if admin:
+            # update password
+            admin.password = CONFIG['password']
+        else:
+            admin = user_datastore.create_user(
+                email=ADMIN_USER, password=CONFIG['password'])
+            user_datastore.add_role_to_user(admin, admin_role)
+
         db.session.commit()
 
-    app.config['photo_dir'] = path(CONFIG['photo_dir'])
-    app.config['thumb_dir'] = path(CONFIG['thumb_dir'])
+    photo_dir = path(CONFIG['photo_dir'])
+    thumb_dir = path(CONFIG['thumb_dir'])
+    thumbnail = int(CONFIG['thumbnail'])
+    app.config['library'] = Library(
+        photo_dir, thumb_dir, thumbnail=thumbnail)
 
-    app.config['library'] = Library(app.config['photo_dir'])
+    # from route.api import api
+    # app.register_blueprint(api, url_prefix='/api')
 
     # inject `library` into the context of templates
     # http://flask.pocoo.org/docs/templating/#context-processors
@@ -135,17 +151,27 @@ if __name__ == '__main__':
     def get_album(album=''):
         return render_template('album.html', album=path(album))
 
-    @app.route('/thumbnail/<dimension>/<path:medium>')
+    @app.route('/thumbnail/<path:medium>')
     @login_required
-    def get_thumbnail(dimension=None, medium=None):
-        return send_file(filename, mimetype='image/jpeg')
-
-    @app.route('/medium/<path:medium>')
-    @login_required
-    def get_medium(medium=None):
+    def get_thumbnail(medium=None):
         return send_file(
-            app.config['library'].absolute_path(medium)
+            app.config['library'].getThumbnail(medium),
+            mimetype=app.config['library'].getThumbnailMIMEType(medium)
         )
 
-    app.run()
+    @app.route('/display/<path:medium>')
+    @login_required
+    def get_display(medium=None):
+        return send_file(
+            app.config['library'].getDisplay(medium),
+            mimetype=app.config['library'].getDisplayMIMEType(medium)
+        )
 
+    # @app.route('/medium/<path:medium>')
+    # @login_required
+    # def get_medium(medium=None):
+    #     return send_file(
+    #         app.config['library'].absolute_path(medium)
+    #     )
+
+    app.run()

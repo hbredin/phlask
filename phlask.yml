@@ -1,8 +1,20 @@
-secret_key: "j]79kW203/I([45;B{>?#1$ciL6n8C"
-debug: True
+
+# library root directory
 photo_dir: "/Volumes/home/Pictures/"
+
+# thumbnail root directory
 thumb_dir: "/tmp/thumb/"
+# thumbnail height in pixel
+thumbnail: 100
+# display height in pixel
+display: 600
+# user management datase
 database: "/tmp/phlask.db"
 
-# root password
+# password for root user
 password: "password"
+
+
+secret_key: "j]79kW203/I([45;B{>?#1$ciL6n8C"
+debug: True
+
