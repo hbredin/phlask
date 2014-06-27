@@ -342,6 +342,22 @@ class Library(nx.DiGraph):
         supalbum = self.predecessors(album)[0]
         return self.userIsAllowed(self[supalbum][album])
 
+    def getBreadcrumbs(self, album):
+        """
+        """
+
+        if not self.userCanTraverseAlbum(album):
+            return None
+
+        if album == path(''):
+            return [(path(''), 'home')]
+
+        ze_path = list(nx.all_simple_paths(self, path(''), path(album)))[0]
+        breadcrumbs = [[p, p.basename()] for p in ze_path]
+        breadcrumbs[0][1] = 'home'
+
+        return breadcrumbs
+
     def getAlbumSubAlbums(self, album):
         """Get list of traversable sub-albums
 
