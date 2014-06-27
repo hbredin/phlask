@@ -32,7 +32,6 @@ setup(
     version='0.1',
     description='flask-based photo gallery',
     author='Hervé Bredin',
-    author_email='bredin@limsi.fr',
     url='http://herve.niderb.fr',
     packages=find_packages(),
     install_requires=[
