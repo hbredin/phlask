@@ -1,19 +1,125 @@
-<!doctype html>
-<!--
-<script
-    type=text/javascript 
-    src="{{ url_for('static', filename='jquery.js') }}">
-</script>
--->
-<title>Phlask | {{ album }}</title>
-authenticated as {{ current_user.email }}<br/>
+{% extends "base.html" %}
 
-{% for subalbum in library.getAlbumSubAlbums(album) %}
-	<a href={{ url_for('get_album', album=subalbum) }}>{{ subalbum }}</a>
-{% endfor %}
-{% for medium in library.getAlbumMedia(album) %}
-    <a href={{ url_for('get_display', medium=medium) }}>
-        <img src={{ url_for('get_thumbnail', medium=medium) }} />
-    </a> 
-{% endfor %}
+<!-- Title -->
+{% block title %}
+Phlask | {{ album }}
+{% endblock title %}
+
+<!-- Brand -->
+{% block brand %}
+H&amp;Em
+{% endblock %}
+
+<!-- Navigation bar -->
+{% block navbar %}
+
+    {% if current_user.is_authenticated() %}
+
+    <ul class="nav navbar-nav navbar-left">
+        {% for path, name in library.getBreadcrumbs(album)[1:] %}
+        <li><a href="{{ url_for('get_album', album=path) }}">{{ name }}</a></li>
+        {% endfor %}
+    </ul>
+
+    <form action="{{ url_for_security('logout') }}" 
+          class="navbar-form navbar-right">
+
+        <label>{{ current_user.email }} </label>
+        <button type="submit" 
+                class="btn btn-default">Logout</button>
+        <input id="next" name="next" type="hidden" 
+               value="{{ url_for('get_album', album=album) }}">
+
+    </form>
+
+    {% else %}
+
+    <form action="{{ url_for_security('login') }}" 
+          method="POST" 
+          name="login_user_form" 
+          class="navbar-form navbar-right">
+
+        {{ login_user_form.hidden_tag() }}
+        <div class="form-group">
+            <input id="email" name="email" type="text" 
+                   class="form-control" placeholder="email">
+            <input id="password" name="password" type="password" 
+                   class="form-control" placeholder="password">
+            <input id="next" name="next" type="hidden" 
+                   value="{{ url_for('get_album', album=album) }}">
+        </div>
+        <button id="submit" name="submit" type="submit" 
+                class="btn btn-default">Login</button>
+
+    </form>
+
+    {% endif %}
+
+{% endblock %}
+
+<!-- Content -->
+{% block content %}
+
+    {% if current_user.is_authenticated() %}
+
+    <div class="thumbnail_ribbon">
+
+        {% for subalbum in library.getAlbumSubAlbums(album) %}
+            <a href={{ url_for('get_album', album=subalbum) }}>
+            <img data-src="holder.js/{{ thumbnail_height }}x{{ thumbnail_height }}/text:{{ subalbum.basename() }}"/>
+            </a>
+        {% endfor %}
+
+        {% for medium in library.getAlbumMedia(album) %}
+            <a href="#{{ medium }}">
+            <img class="lazy" 
+                 data-original="{{ url_for('get_thumbnail', medium=medium) }}" 
+                 height="{{ thumbnail_height }}" />
+            </a> 
+        {% endfor %}
+    </div>
+
+    <div class="display_ribbon">    
+
+        {% for subalbum in library.getAlbumSubAlbums(album) %}
+            <a href={{ url_for('get_album', album=subalbum) }}>
+            <img data-src="holder.js/{{ display_height }}x{{ display_height }}/text:{{ subalbum.basename() }}"/>
+            </a>
+        {% endfor %}
+
+        {% for medium in library.getAlbumMedia(album) %}
+            <img class="lazy"
+                 id="{{ medium }}"
+                 data-original="{{ url_for('get_display', medium=medium) }}" 
+                 height="{{ display_height }}" />
+        {% endfor %}
+    </div>
+
+    {% else %}
+
+    
+    {% endif %}
+
+{% endblock %}
+
+<!--  -->
+{% block style %}
+
+    <link href="{{ url_for('static', filename='css/phlask.css') }}" rel="stylesheet">
+
+    <style type="text/css" media="screen">
+        .thumbnail_ribbon { height: "{{ thumbnail_height }}px" }
+        .display_ribbon { height: "{{ display_height }}px" }
+    </style>
+
+{% endblock %}
+
+
+<!--  -->
+{% block script %}
+    <script type="text/javascript" charset="utf-8">
+        $(function() {$("img.lazy").lazyload({container: $("div.display_ribbon")});});
+        $(function() {$("img.lazy").lazyload({container: $("div.thumbnail_ribbon")});});
+    </script>
+{% endblock %}
 

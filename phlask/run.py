@@ -46,6 +46,7 @@ from flask import render_template, redirect, url_for, send_file
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
+from flask.ext.security.forms import LoginForm
 
 from phlask import app
 from phlask.library import Library
@@ -129,11 +130,9 @@ if __name__ == '__main__':
     photo_dir = path(CONFIG['photo_dir'])
     thumb_dir = path(CONFIG['thumb_dir'])
     thumbnail = int(CONFIG['thumbnail'])
+    display = int(CONFIG['display'])
     app.config['library'] = Library(
-        photo_dir, thumb_dir, thumbnail=thumbnail)
-
-    # from route.api import api
-    # app.register_blueprint(api, url_prefix='/api')
+        photo_dir, thumb_dir, thumbnail=thumbnail, display=display)
 
     # inject `library` into the context of templates
     # http://flask.pocoo.org/docs/templating/#context-processors
@@ -141,16 +140,27 @@ if __name__ == '__main__':
     def inject_library():
         return dict(library=app.config['library'])
 
+    # redirect / to /album
     @app.route('/')
-    @login_required
     def root():
         return redirect(url_for('get_album', album=''))
 
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ALBUMS
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     @app.route('/album/')
     @app.route('/album/<path:album>')
-    @login_required
     def get_album(album=''):
-        return render_template('album.html', album=path(album))
+        return render_template('album.html',
+                               album=path(album),
+                               thumbnail_height=thumbnail,
+                               display_height=display,
+                               login_user_form=LoginForm())
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # MEDIUMS
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     @app.route('/thumbnail/<path:medium>')
     @login_required
@@ -168,11 +178,6 @@ if __name__ == '__main__':
             mimetype=app.config['library'].getDisplayMIMEType(medium)
         )
 
-    # @app.route('/medium/<path:medium>')
-    # @login_required
-    # def get_medium(medium=None):
-    #     return send_file(
-    #         app.config['library'].absolute_path(medium)
-    #     )
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     app.run()

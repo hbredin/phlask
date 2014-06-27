@@ -7,7 +7,7 @@ thumb_dir: "/tmp/thumb/"
 # thumbnail height in pixel
 thumbnail: 100
 # display height in pixel
-display: 600
+display: 500
 # user management datase
 database: "/tmp/phlask.db"
 
