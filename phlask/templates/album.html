@@ -61,17 +61,14 @@ H&amp;Em
 {% block content %}
 
     {% if current_user.is_authenticated() %}
-
     <div class="thumbnail_ribbon">
-
-        {% for subalbum in library.getAlbumSubAlbums(album) %}
-            <a href={{ url_for('get_album', album=subalbum) }}>
-            <img data-src="holder.js/{{ thumbnail_height }}x{{ thumbnail_height }}/text:{{ subalbum.basename() }}"/>
+        {% for path, name in library.getBreadcrumbs(album)[1:] %}
+            <a class="box_thumb" href={{ url_for('get_album', album=path) }}>
+            <p class="box_text">{{ path.basename() }}</p>
             </a>
         {% endfor %}
-
         {% for medium in library.getAlbumMedia(album) %}
-            <a href="#{{ medium }}">
+            <a class="box_thumb" href="#{{ medium }}">
             <img class="lazy" 
                  data-original="{{ url_for('get_thumbnail', medium=medium) }}" 
                  height="{{ thumbnail_height }}" />
@@ -80,13 +77,11 @@ H&amp;Em
     </div>
 
     <div class="display_ribbon">    
-
         {% for subalbum in library.getAlbumSubAlbums(album) %}
             <a href={{ url_for('get_album', album=subalbum) }}>
             <img data-src="holder.js/{{ display_height }}x{{ display_height }}/text:{{ subalbum.basename() }}"/>
             </a>
         {% endfor %}
-
         {% for medium in library.getAlbumMedia(album) %}
             <img class="lazy"
                  id="{{ medium }}"

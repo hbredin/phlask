@@ -1,28 +1,5 @@
 body { padding-top: 50px; }
 
-.thumbnail_container
-{
-    display: inline;
-    position: relative;
-}
-
-.thumbnail_image
-{    
-    position:absolute;
-    left:0;
-    top:0;
-}
-.thumbnail_text
-{
-    z-index:100;
-    position:absolute;    
-    color:white;
-    font-size:10px;
-    font-weight:bold;
-    left:0px;
-    top:0px;
-}
-
 .thumbnail_ribbon
 {
     white-space: nowrap;
@@ -35,4 +12,19 @@ body { padding-top: 50px; }
     white-space: nowrap;
     overflow-x: scroll;
     overflow-y: hidden;
+}
+
+.box_thumb {
+  display: inline-block;
+  position:relative;
+  overflow: hidden;
+  background-color: #aaa;
+  height: 100px;
+}
+
+.box_text
+{
+    color:white;
+    font-size:32px;
+    font-weight:bold
 }
