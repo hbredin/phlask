@@ -47,11 +47,12 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
 from flask.ext.security.forms import LoginForm
+from flask_mail import Mail
 
 from phlask import app
 from phlask.library import Library
 from phlask.library import USER_ROLE_NAME, USER_ROLE_DESCRIPTION, \
-    ADMIN_ROLE_NAME, ADMIN_ROLE_DESCRIPTION, ADMIN_USER
+    ADMIN_ROLE_NAME, ADMIN_ROLE_DESCRIPTION
 
 if __name__ == '__main__':
 
@@ -61,19 +62,59 @@ if __name__ == '__main__':
         CONFIG = yaml.load(_)
 
     app.secret_key = CONFIG['secret_key']
-    app.debug = CONFIG['debug']
+    app.debug = ARGUMENTS['--debug']
 
-    # Flask-Security configuration
-    # app.config['SECURITY_BLUEPRINT_NAME'] = 'security'
-    # app.config['SECURITY_URL_PREFIX'] = '/api'
+    app.config['SECURITY_CONFIRMABLE'] = True
     app.config['SECURITY_REGISTERABLE'] = True
-    app.config['SECURITY_SEND_REGISTER_EMAIL'] = False
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + CONFIG['database']
+    app.config['SECURITY_RECOVERABLE'] = True
+    app.config['SECURITY_TRACKABLE'] = False
+    app.config['SECURITY_PASSWORDLESS'] = False
+    app.config['SECURITY_CHANGEABLE'] = True
+    app.config['SECURITY_DEFAULT_REMEMBER_ME'] = False
+    app.config['SECURITY_LOGIN_WITHOUT_CONFIRMATION'] = True
+    # app.config['SECURITY_URL_PREFIX'] = None
+    # app.config['SECURITY_FLASH_MESSAGES'] = True
+    # app.config['SECURITY_PASSWORD_HASH'] = 'plaintext'
+    # app.config['SECURITY_PASSWORD_SALT'] = None
+    # app.config['SECURITY_LOGIN_URL'] = '/login'
+    # app.config['SECURITY_LOGOUT_URL'] = '/logout'
+    # app.config['SECURITY_REGISTER_URL'] = '/register'
+    # app.config['SECURITY_RESET_URL'] = '/reset'
+    # app.config['SECURITY_CHANGE_URL'] = '/change'
+    # app.config['SECURITY_CONFIRM_URL'] = '/confirm'
+    # app.config['SECURITY_POST_LOGIN_VIEW'] = '/'
+    # app.config['SECURITY_POST_LOGOUT_VIEW'] = '/'
+    # app.config['SECURITY_CONFIRM_ERROR_VIEW'] = None
+    # app.config['SECURITY_POST_REGISTER_VIEW'] = None
+    # app.config['SECURITY_POST_CONFIRM_VIEW'] = None
+    # app.config['SECURITY_POST_RESET_VIEW'] = None
+    # app.config['SECURITY_POST_CHANGE_VIEW'] = None
+    # app.config['SECURITY_UNAUTHORIZED_VIEW'] = None
 
-    # Create database connection object
+    # ~~ MAIL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    if 'mail' in CONFIG:
+
+        app.config['MAIL_SERVER'] = CONFIG['mail']['server']
+        app.config['MAIL_PORT'] = CONFIG['mail']['port']
+        app.config['MAIL_USE_SSL'] = CONFIG['mail']['ssl']
+        app.config['MAIL_USERNAME'] = CONFIG['mail']['username']
+        app.config['MAIL_PASSWORD'] = CONFIG['mail']['password']
+
+        app.config['SECURITY_EMAIL_SENDER'] = CONFIG['mail']['sender']
+        app.config['SECURITY_SEND_REGISTER_EMAIL'] = True
+        app.config['SECURITY_SEND_PASSWORD_CHANGE_EMAIL'] = True
+        app.config['SECURITY_SEND_PASSWORD_RESET_NOTICE_EMAIL'] = True
+
+        mail = Mail(app)
+
+    # ~~ USER MANAGEMENT~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    database = CONFIG['phlask']['database']
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + database
+
     db = SQLAlchemy(app)
 
-    # Define models
     roles_users = db.Table(
         'roles_users',
         db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
@@ -85,13 +126,11 @@ if __name__ == '__main__':
         description = db.Column(db.String(255))
 
     class User(db.Model, UserMixin):
-
         id = db.Column(db.Integer, primary_key=True)
         email = db.Column(db.String(255), unique=True)
         password = db.Column(db.String(255))
         active = db.Column(db.Boolean())
         confirmed_at = db.Column(db.DateTime())
-
         roles = db.relationship(
             'Role',
             secondary=roles_users,
@@ -99,8 +138,9 @@ if __name__ == '__main__':
         )
 
     # Setup Flask-Security
-    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-    security = Security(app, user_datastore)
+    datastore = SQLAlchemyUserDatastore(db, User, Role)
+
+    security = Security(app, datastore)
 
     @app.before_first_request
     def create_root_user():
@@ -108,31 +148,30 @@ if __name__ == '__main__':
         db.create_all()
 
         # create 'admin' role if it does not exist
-        admin_role = user_datastore.find_or_create_role(
+        admin_role = datastore.find_or_create_role(
             name=ADMIN_ROLE_NAME, description=ADMIN_ROLE_DESCRIPTION)
 
         # create 'user' role if it does not exist
-        user_datastore.find_or_create_role(
+        datastore.find_or_create_role(
             name=USER_ROLE_NAME, description=USER_ROLE_DESCRIPTION)
 
         # create 'admin' user (with 'admin' role) if it does not exist
-        admin = user_datastore.get_user(ADMIN_USER)
+        admin = datastore.get_user('root')
         if admin:
             # update password
-            admin.password = CONFIG['password']
+            admin.password = CONFIG['phlask']['root_password']
         else:
-            admin = user_datastore.create_user(
-                email=ADMIN_USER, password=CONFIG['password'])
-            user_datastore.add_role_to_user(admin, admin_role)
+            admin = datastore.create_user(
+                email='root', password=CONFIG['phlask']['root_password'])
+            datastore.add_role_to_user(admin, admin_role)
 
         db.session.commit()
 
-    photo_dir = path(CONFIG['photo_dir'])
-    thumb_dir = path(CONFIG['thumb_dir'])
-    thumbnail = int(CONFIG['thumbnail'])
-    display = int(CONFIG['display'])
     app.config['library'] = Library(
-        photo_dir, thumb_dir, thumbnail=thumbnail, display=display)
+        CONFIG['phlask']['original_dir'],
+        CONFIG['phlask']['thumbnail_dir'],
+        thumbnail=int(CONFIG['phlask']['thumbnail_size']),
+        display=int(CONFIG['phlask']['display_size']))
 
     # inject `library` into the context of templates
     # http://flask.pocoo.org/docs/templating/#context-processors
@@ -140,10 +179,9 @@ if __name__ == '__main__':
     def inject_library():
         return dict(library=app.config['library'])
 
-    # redirect / to /album
-    @app.route('/')
-    def root():
-        return redirect(url_for('get_album', album=''))
+    @app.context_processor
+    def inject_login_user_form():
+        return dict(login_user_form=LoginForm())
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ALBUMS
@@ -151,12 +189,17 @@ if __name__ == '__main__':
 
     @app.route('/album/')
     @app.route('/album/<path:album>')
+    @login_required
     def get_album(album=''):
-        return render_template('album.html',
-                               album=path(album),
-                               thumbnail_height=thumbnail,
-                               display_height=display,
-                               login_user_form=LoginForm())
+        return render_template(
+            'album.html', album=path(album),
+            thumbnail_height=int(CONFIG['phlask']['thumbnail_size']),
+            display_height=int(CONFIG['phlask']['display_size']))
+
+    # redirect / to /album
+    @app.route('/')
+    def root():
+        return redirect(url_for('get_album', album=''))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # MEDIUMS
@@ -179,5 +222,17 @@ if __name__ == '__main__':
         )
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ADMIN
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    @app.route('/admin/reload')
+    @login_required
+    def reload():
+        app.config['library'] = Library(
+            CONFIG['phlask']['original_dir'],
+            CONFIG['phlask']['thumbnail_dir'],
+            thumbnail=CONFIG['phlask']['thumbnail_size'],
+            display=CONFIG['phlask']['display_size'])
+        return redirect(url_for('get_album', album=''))
 
     app.run()

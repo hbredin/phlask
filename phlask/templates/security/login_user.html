@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-offset-3 col-md-6">
+        <div class="panel panel-success">
+            <div class="panel-heading">
+                <h3 class="panel-title">Connexion</h3>
+            </div>
+            <div class="panel-body">
+                <form name="login_user_form" role="form" action="{{ url_for_security('login') }}" method="POST">
+                    {{ login_user_form.hidden_tag() }}
+                    <div class="form-group">
+                        <label for="email">Adresse em@il</label>
+                        <input id="email" name="email" type="text" placeholder="em@il" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mot de passe</label>
+                        <input id="password" name="password" type="password" placeholder="mot de passe" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-success">Connexion</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

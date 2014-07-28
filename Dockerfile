@@ -1,10 +1,7 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2013-2014 Hervé BREDIN (http://herve.niderb.fr/)
+# Copyright (c) 2014 Hervé BREDIN -- http://herve.niderb.fr/
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,31 +22,16 @@
 # SOFTWARE.
 #
 
-from setuptools import setup, find_packages
+FROM ubuntu:14.04
+MAINTAINER Herve Bredin <http://herve.niderb.fr>
 
-setup(
-    name='phlask',
-    version='0.1',
-    description='flask-based photo gallery',
-    author='Hervé Bredin',
-    url='http://herve.niderb.fr',
-    packages=find_packages(),
-    install_requires=[
-        'flask >=0.10.1',
-        'flask-security >=1.7.1',
-        'flask-sqlalchemy >=1.0',
-        'flask-cors >=1.0',
-        'PyYAML >=3.10',
-        'docopt >=0.6.1',
-        'path.py >=5.1',
-        'networkx >=1.8.1',
-        'pillow >=1.1.7',
-    ],
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: MIT License",
-        "Natural Language :: English",
-        "Programming Language :: Python :: 2.7",
-        "Topic :: Scientific/Engineering"]
-)
+RUN apt-get update
+RUN apt-get -y install python-pip
+
+RUN python setup.py install
+
+VOLUME ["/phlask/original", "/phlask/thumbnail", "/phlask/database"]
+
+ENTRYPOINT ["python", "-m", "phlask.run", "phlask.yml"]
+
+EXPOSE 5000

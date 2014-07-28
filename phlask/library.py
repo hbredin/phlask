@@ -36,7 +36,6 @@ ADMIN_ROLE_NAME = 'admin'
 ADMIN_ROLE_DESCRIPTION = 'description of admin role'
 USER_ROLE_NAME = 'user'
 USER_ROLE_DESCRIPTION = 'description of user role'
-ADMIN_USER = 'root'
 
 ALBUM_YML = 'album.yml'
 
@@ -342,21 +341,20 @@ class Library(nx.DiGraph):
         supalbum = self.predecessors(album)[0]
         return self.userIsAllowed(self[supalbum][album])
 
-    def getBreadcrumbs(self, album):
-        """
-        """
+    def getPathToAlbum(self, album):
 
         if not self.userCanTraverseAlbum(album):
             return None
 
-        if album == path(''):
-            return [(path(''), 'home')]
+        shortest_path = nx.shortest_path(self, source=path(''),
+                                         target=path(album),
+                                         weight=None)
 
-        ze_path = list(nx.all_simple_paths(self, path(''), path(album)))[0]
-        breadcrumbs = [[p, p.basename()] for p in ze_path]
-        breadcrumbs[0][1] = 'home'
+        return [(p, p.basename()) for p in shortest_path[1:]]
 
-        return breadcrumbs
+    def getSiblings(self, album):
+        parent = self.predecessors(album)[0]
+        return sorted(self.successors(parent))
 
     def getAlbumSubAlbums(self, album):
         """Get list of traversable sub-albums
@@ -376,10 +374,10 @@ class Library(nx.DiGraph):
         if not self.userCanTraverseAlbum(album):
             return None
 
-        return [
+        return sorted([
             subalbum for subalbum in self.successors(album)
             if self.userIsAllowed(self[album][subalbum])
-        ]
+        ])
 
     def userCanBrowseAlbum(self, album):
         """Check whether current user can browse `album`

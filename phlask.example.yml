@@ -1,0 +1,19 @@
+phlask: 
+    original_dir: /phlask/original
+    thumbnail_dir: /phlask/thumbnail
+    database: /phlask/database/phlask.db
+    root_password: password
+    thumbnail_size: 100
+    display_size: 500
+    registerable: True
+
+mail:
+    sender: first.lastname@gmail.com
+    server: smtp.gmail.com
+    port: 465
+    ssl: True
+    username: first.lastname@gmail.com
+    password: p4S5w0rd
+
+
+secret_key: 'a long and very secret string...'
