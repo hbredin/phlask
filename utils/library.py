@@ -4,7 +4,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2013-2014 Hervé BREDIN (http://herve.niderb.fr/)
+# Copyright (c) 2014 Hervé BREDIN (http://herve.niderb.fr/)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,6 @@ from path import path
 
 from flask.ext.security import current_user
 from thumbnail import Thumbnailer
-
-ADMIN_ROLE_NAME = 'admin'
-ADMIN_ROLE_DESCRIPTION = 'description of admin role'
-USER_ROLE_NAME = 'user'
-USER_ROLE_DESCRIPTION = 'description of user role'
 
 ALBUM_YML = 'album.yml'
 
@@ -313,7 +308,7 @@ class Library(nx.DiGraph):
         """
 
         if current_user.email in config['users'] or \
-           current_user.has_role(ADMIN_ROLE_NAME):
+           current_user.has_role('admin'):
             return True
 
         # if groups and (set(groups) & config['groups']):
@@ -441,8 +436,24 @@ class Library(nx.DiGraph):
     def getThumbnailMIMEType(self, medium):
         return 'image/jpeg'
 
-
     # def getAbsolutePath(self, relative_path):
     #     """Get absolute path"""
     #     root = self.graph['root']
     #     return path.joinpath(root, relative_path)
+
+
+def library_setup(app, original_dir, thumbnail_dir, thumbnail, display):
+
+    library = Library(original_dir,
+                      thumbnail_dir, thumbnail=thumbnail, display=display)
+
+    app.config['library'] = library
+
+    # inject `library` into the context of templates
+    # http://flask.pocoo.org/docs/templating/#context-processors
+    @app.context_processor
+    def inject_library():
+        return dict(library=library)
+
+    return library
+

@@ -1,0 +1,18 @@
+phlask: 
+    original_dir: /photos
+    working_dir: /phlask
+    root_password: password
+    thumbnail_size: 100
+    display_size: 500
+    registerable: True
+    secret_key: 7.8jOM3~qHR8/FmTw0~g4`eu"zBviV313ofaY9'NJeDxG.Ls
+
+mail:
+    sender: username@gmail.com
+    server: smtp.gmail.com
+    port: 465
+    ssl: True
+    username: username@gmail.com
+    password: gm@i1_p4s5w0rD
+
+

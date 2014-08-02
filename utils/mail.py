@@ -4,7 +4,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2013-2014 Hervé BREDIN (http://herve.niderb.fr/)
+# Copyright (c) 2014 Hervé BREDIN (http://herve.niderb.fr/)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,31 +25,23 @@
 # SOFTWARE.
 #
 
-from setuptools import setup, find_packages
+from flask_mail import Mail
 
-setup(
-    name='phlask',
-    version='0.1',
-    description='flask-based photo gallery',
-    author='Hervé Bredin',
-    url='http://herve.niderb.fr',
-    packages=find_packages(),
-    install_requires=[
-        'flask >=0.10.1',
-        'flask-security >=1.7.1',
-        'flask-sqlalchemy >=1.0',
-        'flask-cors >=1.0',
-        'PyYAML >=3.10',
-        'docopt >=0.6.1',
-        'path.py >=5.1',
-        'networkx >=1.8.1',
-        'pillow >=1.1.7',
-    ],
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: MIT License",
-        "Natural Language :: English",
-        "Programming Language :: Python :: 2.7",
-        "Topic :: Scientific/Engineering"]
-)
+
+def mail_setup(app,
+               server=None, port=None, use_ssl=False,
+               username=None, password=None, sender=None):
+
+    app.config['MAIL_SERVER'] = server
+    app.config['MAIL_PORT'] = port
+    app.config['MAIL_USE_SSL'] = use_ssl
+    app.config['MAIL_USERNAME'] = username
+    app.config['MAIL_PASSWORD'] = password
+    app.config['SECURITY_EMAIL_SENDER'] = sender
+    app.config['SECURITY_SEND_REGISTER_EMAIL'] = True
+    app.config['SECURITY_SEND_PASSWORD_CHANGE_EMAIL'] = True
+    app.config['SECURITY_SEND_PASSWORD_RESET_NOTICE_EMAIL'] = True
+
+    mail = Mail(app)
+
+    return mail

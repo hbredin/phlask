@@ -72,13 +72,17 @@ Phlask
         {% if subalbums %}
 
             <div class="row">
-            <div class="col-md-offset-3 col-md-6">
-            <ul class="list-group">
+
+            {% for subalbum in subalbums %}
+                <p class="lead text-center" style={white-space: nowrap;}><a href="{{ url_for('get_album', album=subalbum) }}">{{ subalbum.basename() }}</a></p>
+            {% endfor %}
+
+
+<!--             <ul class="list-group">
             {% for subalbum in subalbums %}
                 <li class="list-group-item"><a href="{{ url_for('get_album', album=subalbum) }}">{{ subalbum.basename() }}</a></li>
-            {% endfor %}
+            {% endfor %} -->
             </ul>
-            </div>
             </div>
 
         {% else %}

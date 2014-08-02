@@ -26,12 +26,14 @@ FROM ubuntu:14.04
 MAINTAINER Herve Bredin <http://herve.niderb.fr>
 
 RUN apt-get update
-RUN apt-get -y install python-pip
+RUN apt-get -y install python-pip libjpeg-dev libfreetype6-dev libwebp-dev zlib1g-dev
 
-RUN python setup.py install
+RUN pip install flask flask-security flask-sqlalchemy flask-cors PyYAML docopt path.py networkx Pillow
 
-VOLUME ["/phlask/original", "/phlask/thumbnail", "/phlask/database"]
+ADD . /app
+WORKDIR /app
+CMD python app.py config/docker.yml
 
-ENTRYPOINT ["python", "-m", "phlask.run", "phlask.yml"]
-
+VOLUME ["/photos", "/phlask"]
 EXPOSE 5000
+
